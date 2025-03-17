@@ -1,29 +1,19 @@
-# Use an official Node.js runtime as the base image
-FROM node:16-alpine AS builder
+FROM node:16.20.0-alpine as build
 
-# Set the working directory inside the container
 WORKDIR /app
 
-# Copy package.json and package-lock.json (or yarn.lock) to install dependencies
-COPY package.json package-lock.json ./
+COPY package*.json ./
+RUN npm config set engine-strict false && \
+    npm ci --legacy-peer-deps --no-audit
 
-# Install dependencies
-RUN npm install
-
-# Copy the rest of the application code
 COPY . .
-
-# Build the React app
 RUN npm run build
 
-# Use Nginx to serve the built app
-FROM nginx:alpine
+FROM nginx:stable-alpine
 
-# Copy the built app to Nginx's HTML directory
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port 80 for the application
 EXPOSE 80
 
-# Start Nginx
 CMD ["nginx", "-g", "daemon off;"]
