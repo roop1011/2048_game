@@ -1,7 +1,29 @@
-# Use a separate step for dependencies to leverage caching
+# Use an official Node.js runtime as the base image
+FROM node:18-alpine AS builder
+
+# Set the working directory inside the container
 WORKDIR /app
-COPY package*.json ./
-RUN npm install --legacy-peer-deps
+
+# Copy package.json and package-lock.json (or yarn.lock) to install dependencies
+COPY package.json package-lock.json ./
+
+# Install dependencies
+RUN npm install
+
+# Copy the rest of the application code
 COPY . .
 
-CMD ["npm", "start"]
+# Build the React app
+RUN npm run build
+
+# Use Nginx to serve the built app
+FROM nginx:alpine
+
+# Copy the built app to Nginx's HTML directory
+COPY --from=builder /app/dist /usr/share/nginx/html
+
+# Expose port 80 for the application
+EXPOSE 80
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
